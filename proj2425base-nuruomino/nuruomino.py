@@ -35,8 +35,9 @@ class Board:
         adjacents = set()
         #Percorrer a matriz dada
         #Quando encontrar o inteiro nessa matriz tenho de encontrar os seus adjacentes (fazer com o adjacent_values)
-        for row in range(len(self.grid)):
-            for col in range(len(self.grid[0])):
+        tamanho=len(self.grid)
+        for row in range(tamanho):
+            for col in range(tamanho):
                 #encontrei o inteiro nessa matriz
                 if self.grid[row][col] == region:
                     #percorrer as posições adjacentes que eu calcular
