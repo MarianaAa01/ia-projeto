@@ -119,7 +119,3 @@ if __name__ == "__main__":
 
     # Exemplo: regiões adjacentes à região 1
     print("Regiões adjacentes à região 1:", board.adjacent_regions(1))
-
-    # Mais exemplos que quiseres testar:
-    print("Regiões adjacentes à região 2:", board.adjacent_regions(2))
-    print("Regiões adjacentes à região 3:", board.adjacent_regions(3))
