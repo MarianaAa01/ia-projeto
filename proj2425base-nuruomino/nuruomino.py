@@ -104,32 +104,12 @@ class Board:
     
 
 
-    #mapeia tabuleiro
-    def find_regions(self):
-        global list_regions #[0][0] nr de regiões, [0][regiao] nr de posicoes da regiao, [regiao][] posições na região
-        list_regions = [[0]]
-
-        for row in range(length_matrix):
-            for col in range(length_matrix):
-
-                val = self.grid[row][col]
-                #atualiza o número de regiões, quantidade de posições na região e adiciona a posição à região
-                while(val > list_regions[0][0]):
-                    list_regions.append([])
-                    list_regions[0].append(0)
-                    list_regions[0][0] += 1
-
-                list_regions[0][val] += 1
-                list_regions[val].append((row,col))
-                    
-        return
-    
-
-
     def adjacent_regions(self, region:int) -> list:
         """Devolve uma lista das regiões que fazem fronteira com a região enviada no argumento."""
-        #TODO
-        #Criar uma lista vazia
+
+        #TODO função retorna regiões na diagonal que não fazem realmente fronteira
+
+        #Criar uma lista vazia que não aceita duplicados
         adjacents = set()
 
         #Percorrer as posições da região
@@ -162,8 +142,27 @@ class Board:
                 r, c = row + dr, col + dc #calculo a "nova posição" a analisar com base no desvio criado nos fors
                 
                 #testar os limites da matriz
-                if 0 <= r < len(self.grid) and 0 <= c < len(self.grid[0]):
+                if 0 <= r < self.length_matrix and 0 <= c < self.length_matrix:
                     positions.append((r, c))
+                
+        return positions
+    
+    def cross_positions(self, row:int, col:int) -> list:
+        """Devolve as posições adjacentes à posição, em todas as direções, não inclui diagonais."""
+        
+        #Lista vazia onde vou colocar os adjacentes da posição recebida
+        positions = []
+
+        #Testa as Adjacentes
+        if row > 0:
+            positions.append((row-1, col))
+        if col > 0:
+            positions.append((row, col-1))
+        if row < self.length_matrix-1:
+            positions.append((row+1, col))
+        if col < self.length_matrix-1:
+            positions.append((row, col+1))        
+                
         return positions
 
     def adjacent_values(self, row:int, col:int) -> list:
@@ -171,8 +170,54 @@ class Board:
         #TODO
         #percorre todas as posições da grid (row, col) e devolve os pares (r,c)
         #para cada (r,c) (posição dum vizinho, faz o self.grid[r][c] nessa posição)
-        return [self.grid[r][c] for r, c in self.adjacent_positions(row, col)]
+        return [self.grid[pos[0]][pos[1]] for pos in self.adjacent_positions(row, col)]
     
+    def cross_values(self, row:int, col:int) -> list:
+        """Devolve os valores das celulas adjacentes à região, em todas as direções, não inclui diagonais."""
+        #TODO
+        #percorre todas as posições da grid (row, col) e devolve os pares (r,c)
+        #para cada (r,c) (posição dum vizinho, faz o self.grid[r][c] nessa posição)
+        return [self.grid[pos[0]][pos[1]] for pos in self.cross_positions(row, col)]
+    
+    def regions_with_four(self):
+        """Por enquanto vou marcar com I as regiões que têm 4 coordenadas/células"""
+        
+        # Fazer uma cópia da grid para não alterar a original e dar isto como output
+        new_board = [[str(cell) for cell in row] for row in self.grid]  
+        
+        # percorrer a grid e verificar se tem 4 vizinhos
+        # vou de numero em numero até na primeira linha da nossa tabela
+        for region_number in range (1, list_regions[0][0]+1): 
+            region_cells = list_regions[region_number]
+            print("AAAAAAAAAHHHHH   " + str(region_cells))
+
+            #se essa região tem exatamente 4 coordenadas/células, marco com I
+            #if (len(region_cells) == 4):
+                #for (row, col) in region_cells:
+                    #new_board[row][col] = "I"
+
+            if (list_regions[0][region_number] == 4):
+                shape = self.find_shape(region_cells)
+                for (row, col) in region_cells:
+                    new_board[row][col] = shape
+
+        # Print do novo tabuleiro  
+        for row in new_board:
+            print("\t".join(row))
+
+    @staticmethod
+    def find_shape(region_cells):
+        """Devolve a letra da forma (I, L, S, T) correspondente à região."""
+
+        region_set = set(region_cells)
+        a, b = region_cells[0]  # Célula base da região
+
+        for shape_name, offsets in positions.items():
+            test_coords = [(a + dx, b + dy) for dx, dy in offsets]
+            if set(test_coords) == region_set:
+                return shape_name[0]  # Retorna só 'I', 'L', 'S' ou 'T'
+
+
     
     @staticmethod
     def parse_instance():
@@ -187,18 +232,13 @@ class Board:
         #O nosso parse_instance funciona admitindo que é tudo inteiros, são matrizes quadradas e que não há caracteres inválidos
         from sys import stdin
 
-        global length_matrix
-        length_matrix = 0
-
         grid = []
 
         for line in stdin:
-            #Ignora linhas vazias
-            if line.strip() == "":
-                continue
-            #Converte a linha em inteiros
-            row = list(map(int, line.strip().split()))
-            grid.append(row)
+            #ignorar linhas vazias
+            if line.strip():  
+                row = list(map(int, line.strip().split()))
+                grid.append(row)
 
                 # como sabemos que os tabuleiros são quadrados, quando o numero de linhas for igual 
                 # ao numero de elementos duma linha podemos logo contruir o Board sem ter de dar ctrl+D
