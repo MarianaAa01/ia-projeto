@@ -50,9 +50,26 @@ class Board:
         self.list_regions = [[0]] # [0][0] = número de regiões, [0][regiao] = número de posições da regiao, [regiao] = tuplo com posições na região
         self.list_nr_free = [[0]] # Semelhante ao List_regions mas vamos alterar para ficar com o estado atual do board (só vai conter as livres)
         self.list_pieces = [] # tuplos com (<número_da_região_da_peça>, <tipo_de_peça>, <lista_de_posições_ocupadas>) tipo de peça é (L1, L2, L3, etc...)
-        self.list_X = [] # tuplos com posições X (pode haver posições repetidas)
-    
+        self.list_X = [] # tuplos com posições X (pode haver posições repetidas) (<coordenada>, <nº_da_região>)
 
+        #self.regions_with_four()
+
+    def copy(self):
+        #Deep copy do Board
+        
+        new_grid = [row[:] for row in self.grid]  # Copia profunda da grid
+
+        new_board = Board(new_grid)
+
+        new_board.impossible = self.impossible
+        new_board.length_matrix = self.length_matrix
+
+        new_board.list_regions = [r[:] for r in self.list_regions]
+        new_board.list_nr_free = [r[:] for r in self.list_nr_free]
+        new_board.list_pieces = [tuple(p) for p in self.list_pieces]
+        new_board.list_X = [tuple(x) for x in self.list_X]
+
+        return new_board
 
     def find_regions(self):
         for row in range(self.length_matrix):
@@ -162,18 +179,22 @@ class Board:
         return [self.grid[pos[0]][pos[1]] for pos in self.cross_positions(row, col)]
     
     def regions_with_four(self):
-        """Percorre um loop que coloca as peças nas regiões com 4 posições livres"""
+        #Percorre um loop que coloca as peças nas regiões com 4 posições livres
         
         # Fazer uma cópia da grid para não alterar a original e dar isto como output
-        new_board = [[str(cell) for cell in row] for row in self.grid]  
+        #new_board = [[str(cell) for cell in row] for row in self.grid]  
   
         #se essa região tem exatamente 4 coordenadas/células
 
         #TODO mudar list_regions para list_nr_free
-            
+        
+        #AQUI
+        #print(self.list_nr_free)
         region = 1
         loop = 0
-
+        # AQUI
+        #print(self.list_nr_free[0])
+        #print(self.list_nr_free[0][region])
         while(loop != 1 or region != self.list_regions[0][0]+1):
             if (region == self.list_regions[0][0]+1): #chega aqui quando loop = 0
                 loop = 1
@@ -183,27 +204,39 @@ class Board:
                 region_cells = self.list_nr_free[region]
                 loop = 0 #modificou portanto o loop foi util
                 shape = self.find_shape(region_cells) # I1, I2, L1, L2, etc...
-                self.insert_shape(self, new_board, region, shape, region_cells)
+                self.insert_shape(self, region, shape, region_cells)
 
             region += 1
+        
+        #print("AAAAAAAAAAAAAAAAAAAAH\n")
+        """for row in self.grid:
+            print("\t".join(
+                f"{COLORS.get(cell, '')}{cell}{COLORS['END']}" if cell in COLORS else str(cell)
+                for cell in row
+            ))
+        print("\n")"""
+
+        # AQUI
+        #first = self.list_pieces[0]
+        #print("Primeira peça: " + str(first) + "\n\n")
 
 
-
+        # AQUI
         # Chama a função para imprimir o tabuleiro
-        self.print_board(new_board)
+        #self.print_board_colors()
 
 
 
     
     @staticmethod
-    def insert_shape(self, new_board, region_number: int, shape: str, region_cells: list):
+    def insert_shape(self, region_number: int, shape: str, region_cells: list):
         """Insere a peça na região correspondente quando a região tem apenas 4 coordenadas."""
         # quando o shape vem igual a None isto dá erro
         shape_letter = shape[0] # L, I, T ou S
 
         # Marca as células da região com a letra da forma
         for (row, col) in region_cells:
-            new_board[row][col] = shape_letter
+            self.grid[row][col] = shape_letter
                     
         # Adiciona a peça à lista
         self.list_pieces.append((region_number, shape, region_cells))
@@ -219,13 +252,14 @@ class Board:
                 reg = self.grid[r][c]
                 # Evita sobrescrever letras já marcadas (vamos fazer isto e adicionar a coordenada do X na lista das regioes invalidas)
                 if isinstance(reg, int) and self.list_nr_free[0][reg] > 0:
-                    new_board[r][c] = "X"
+                    self.grid[r][c] = "X"
                     self.list_nr_free[0][reg] -= 1
 
                     # Remover a coordenada (r, c) da lista das posições livres da região
                     if (r, c) in self.list_nr_free[reg]:
                         self.list_nr_free[reg].remove((r, c))
-                            
+                
+         
                 # Adiciona a coordenada a lista de X
                 self.list_X.append(((r, c), reg))
 
@@ -269,12 +303,16 @@ class Board:
         # 1. Encontrar a região menor com mais de 4 coordenadas livres
         smaller_region = 1
         min_free = float('inf')
-        for region in range(1, self.list_nr_free[0][0] + 1):
+        #print("livres: " + str(self.list_nr_free[0][7]))
+        for region in range(1, self.list_regions[0][0] + 1):
             nr_free = len(self.list_nr_free[region])  # número de células livres da região
-            if nr_free > 4 and nr_free < min_free:
+            
+            if nr_free > 4 and nr_free < min_free and nr_free>0:
+        
                 smaller_region = region
                 min_free = nr_free
         
+        #print("Smaller_region: " + str(smaller_region))
             
 
         if smaller_region is None:
@@ -285,49 +323,20 @@ class Board:
         # 2. Para cada célula livre, tentar colocar cada forma
         for start_cell in region_cells:
             for shape in positions.keys():
-
+                bool = False
                 # Verificar se a forma cabe na região
                 if self.shape_fits_in_region(shape, start_cell, region_cells):
                     shape_letter = shape[0]  # L, I, T, S etc.
                     shape_coords = [(start_cell[0] + dx, start_cell[1] + dy) for dx, dy in positions[shape]]
 
-                    # todas as regiões adjacentes da peça toda
-                    all_adj = []
-                    for (r, c) in shape_coords:
-                        adj = self.cross_positions(r, c)
-                        for (nr, nc) in adj: # (nr, nc) é (neighbor_row, neighbor_col)
-                            neighbor_value = self.grid[nr][nc]
-                            if (neighbor_value != shape_letter and str(neighbor_value) != str(smaller_region)):
-                                all_adj.append((nr, nc))
-                            elif (neighbor_value == shape_letter):
-                                self.impossible = True
-
                     
-
-                    if all_adj:
+                    if not (self.find_square(shape_coords) or self.impossible_neighbor(shape_coords, shape_letter)):
                         actions.append((smaller_region, shape, start_cell))
-
-
-
-                    # Vai de coordenada em coordenada na forma que to a verifica(shape) (FEITO)
-                        # Verifica se a forma (L1, L2, L3, etc...) vai ter pelo menos uma coordenada que faça fronteira com outra região 
-                        # se nenhuma letra dessa peça toca numa letra igual já anteriormente colocada
-                    # O impossible_neighbor vai tratar disto
-                        # se passar a todas as condições:
-                        
-                        #actions.append((smaller_region, shape, start_cell))
+        
+            #print("Actions: " + str(actions))
 
         return actions
-
-
-
-
-
-
-        
-        # encontrei a região mais pequena neste estado e vou passar a flag impossible para True quando necessário
-        #   quando a regiao A está rodeada por outras regioes que já têm peças mas nenhuma delas toca na borda dessa regiao A
-        #   quando já há uma adjacente do tipo (L, T, I ou S) e eu vou colocar 
+                 
 
     def is_isolated_region(self, region: int) -> bool:
         """Verifica se a região está completamente rodeada por peças e nenhuma toca na sua fronteira."""
@@ -342,17 +351,19 @@ class Board:
                         return False  # há contacto com a região A
         return True
     
-    def impossible_neighbor(self, r: int, c: int, shape_letter: str) -> bool:
+    def impossible_neighbor(self, shape_coords, shape_letter: str) -> bool:
         ''' Confirma que a peça é adjacente a uma região diferente e se tem peças iguais como adjacentes Retorna True se for impossivel'''
         count = 0
-        
-        for (adj_r, adj_c) in self.cross_positions(r, c):
-            adj = self.grid[adj_r][adj_c]
+        region = self.grid[shape_coords[0][0]][shape_coords[0][1]]
 
-            if adj == shape_letter:
-                return True
-            if adj != self.grid[r][c]:
-                count += 1
+        for (r,c) in shape_coords:
+            for (adj_r, adj_c) in self.cross_positions(r, c):
+                adj = self.grid[adj_r][adj_c]
+
+                if adj == shape_letter:
+                    return True
+                if adj != region and adj != 'X':
+                    count += 1
 
         return count == 0
 
@@ -382,14 +393,14 @@ class Board:
                             count += 1
                     if count == 3: return True
 
-                if pos_c != self.list_regions[0][0]-1:
+                if pos_c != self.length_matrix-1:
                     count = 0
                     for dr, dc in [(-1, 1),(-1,0),(0, 1)]:
                         if (pos_r + dr, pos_c + dc) in list_pos or self.grid[pos_r + dr][pos_c + dc] in ('L','I','T','S'):
                             count += 1
                     if count == 3: return True
 
-            if pos_r != self.list_regions[0][0]-1:
+            if pos_r != self.length_matrix-1:
                 if pos_c != 0:
                     count = 0
                     for dr, dc in [( 1,-1),( 1,0),(0,-1)]:
@@ -397,12 +408,13 @@ class Board:
                             count += 1
                     if count == 3: return True
 
-                if pos_c != self.list_regions[0][0]-1:
+                if pos_c != self.length_matrix-1:
                     count = 0
                     for dr, dc in [( 1, 1),( 1,0),(0, 1)]:
                         if (pos_r + dr, pos_c + dc) in list_pos or self.grid[pos_r + dr][pos_c + dc] in ('L','I','T','S'):
                             count += 1
                     if count == 3: return True
+        return False
    
 
     def apply_action(self, action):
@@ -423,9 +435,12 @@ class Board:
         # Atualizar list_pieces
         self.list_pieces.append((region, shape, shape_coords))
 
+        #print(self.list_nr_free[0][0])
         # numero de coordenadas livres
-        self.list_nr_free[0][region] -= 4
-        self.list_nr_free[0][0] -= 1
+        #self.list_nr_free[0][region] -= 4
+        #self.list_nr_free[0][0] -= 1
+        #print(self.list_nr_free[0][0])
+        #print("\n")
 
         #Remover posições da list_nr_free da região
         for coord in shape_coords:
@@ -441,9 +456,9 @@ class Board:
                     self.grid[r][c] = 'X'
                     self.list_nr_free[0][reg] -= 1
                     self.list_nr_free[reg].remove((r, c))
-                    self.list_X.append((r, c))
+                    self.list_X.append(((r, c), reg))
         
-        # 👉 MARCAR O RESTO DA REGIÃO COMO 'X' 
+        # MARCAR O RESTO DA REGIÃO COMO 'X' 
         # REVER
         """for coord in self.list_nr_free[region][:]:  # cópia para iterar
             r, c = coord
@@ -454,12 +469,17 @@ class Board:
         
         # Em vez de colocar 'X' em todas as coordenadas da região, colocamos apenas o nº de coordenadas da região a zero
         self.list_nr_free[0][region] = 0
+        self.list_nr_free[region] = []
 
         # ver se a peça fez um quadrado e se fizer coloco como impossible
         if self.find_square(shape_coords):
             self.impossible = True
 
-    def copy(self):
+        
+
+
+
+    """def copy(self):
         grid2 = [[str(cell) for cell in row] for row in self.grid] 
         new_board = Board(grid2)
         new_board.list_regions = self.list_regions
@@ -467,7 +487,7 @@ class Board:
         new_board.list_pieces = self.list_pieces
         new_board.list_X = self.list_X
         new_board.impossible = self.impossible
-        return new_board
+        return new_board"""
 
     def connected(self):
         """Função Verifica se todas as posições estão conectadas
@@ -478,22 +498,25 @@ class Board:
         """
         
         count = 0
-        print("list_pieces:", self.list_pieces)
-        stack = [board.list_pieces[0][2][0]] #primeira peça
-        
-        while stack:
-            if board.grid[pos[0]][pos[1]] != 0: #confiram que pos não foi visitada ainda
-                for adj in board.cross_positions(pos[0], pos[1]):
-                    if board.grid[adj[0]][adj[1]] in ('L','I','T','S'):
-                        stack.append(adj)
+        stack = []
+        stack.append(self.list_pieces[0][2][0]) #list_pieces contem a primeira peça e queremos uma posição
+        visited = set()
 
-            pos = stack.pop() #remove stack
-            board.grid[pos[0]][pos[1]] = 0 #marca como visitada
-            pos = stack.pop() #remove stack
-            board.grid[pos[0]][pos[1]] = 0 #marca como visitada
-            count += 1
+        while stack:
+            pos = stack.pop() #TODO corrigir para remover primeiro elemento da stack
+            
+            if pos not in visited: #confiram que pos não foi visitada ainda
+
+                visited.add(pos) #marca como visitada
+                count += 1
+
+                for adj in self.cross_positions(pos[0], pos[1]):
+                    if self.grid[adj[0]][adj[1]] in ('L','I','T','S'):
+                        stack.append(adj) #adiciona ao final da stack
+            
+
         
-        return count == board.list_regions[0][0] * 4
+        return count == self.list_regions[0][0] * 4
 
     @staticmethod
     def parse_instance():
@@ -522,21 +545,33 @@ class Board:
                 if len(grid) == len(row):
                     break
 
+        # AQUI
+        #print(grid)
+
         return Board(grid)  
         
     # usado pra debugging
-    def print_board(self, board):
+    def print_board_color(self):
         for position in self.list_X:
+            #print(self.list_X)
             (coord, region) = position
-            board[coord[0]][coord[1]] = region
+            #print(position)
+            self.grid[coord[0]][coord[1]] = region
 
-        for row in board:
+        for row in self.grid:
             print("\t".join(
                 f"{COLORS.get(cell, '')}{cell}{COLORS['END']}" if cell in COLORS else str(cell)
                 for cell in row
             ))
+            
+    def print_board(self):
+        for position in self.list_X:
+            (coord, region) = position
+            self.grid[coord[0]][coord[1]] = region
 
-
+        for row in self.grid:
+            print("\t".join(str(cell) for cell in row))
+        
 
     # TODO: outros metodos da classe Board
 
@@ -563,26 +598,34 @@ class Nuruomino(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state)."""
         #cópia do board ("cria" um estado)
+        #print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA " + str(action[0]))
         board_copy = state.board.copy() 
         board_copy.apply_action(action)
+        region = action[0]
+        board_copy.list_nr_free[0][region] = 0
+        board_copy.list_nr_free[0][0] -= 1
+        #print("A merda que to a fazer: " + str(board_copy.list_nr_free[0][0]))
         child_state = NuruominoState(board_copy)
+        
+        #child_state.get_board().print_board_colors() 
+        #print("\n\n")
+        
         return child_state
     
 
     def goal_test(self, state: NuruominoState):
-        """Retorna True se e só se o estado passado como argumento é
-        um estado objetivo. Deve verificar se todas as posições do tabuleiro
-        estão preenchidas de acordo com as regras do problema."""
+        #Retorna True se e só se o estado passado como argumento é
+        #um estado objetivo. Deve verificar se todas as posições do tabuleiro
+        #estão preenchidas de acordo com as regras do problema.
         #TODO
         board = state.get_board()
         if board.impossible:
             return False
         
-        # Verificar se está tudo conectado
+
         # Confirma se todas as regiões têm uma peça
         #          se nº de regiões = nº de peças
-
-        #Verifica se a list_nr_free está tudo a 0 (todas as regiões têm peças), estão todas as peças ligadas,(se há peças iguais adjacentes, se há quadrados???)
+        # Verifica se está tudo conectado no final
 
         
         #confirma que todas as regiões têm uma peça
@@ -595,6 +638,32 @@ class Nuruomino(Problem):
             return False
 
         return board.connected()
+    
+    """def goal_test(self, state: NuruominoState):
+        board = state.get_board()
+
+        if board.impossible:
+            print("[goal_test] Estado impossível detectado.")
+            return False
+
+        # Verifica se todas as regiões têm 0 posições livres
+        if any(i != 0 for i in board.list_nr_free[0]):
+            #print("[goal_test] Regiões ainda têm posições livres:", board.list_nr_free[0])
+            return False
+
+        # Verifica se número de peças é igual ao número de regiões
+        if len(board.list_pieces) != board.list_regions[0][0]:
+            print(f"[goal_test] Número de peças ({len(board.list_pieces)}) diferente do número de regiões ({board.list_regions[0][0]})")
+            return False
+
+        connected = board.connected()
+        if not connected:
+            print("[goal_test] Tabuleiro não está ligado.")
+        else:
+            print("[goal_test] Estado objetivo! :p")
+
+        return connected"""
+
 
 
     def h(self, node: Node):
@@ -612,7 +681,15 @@ class Nuruomino(Problem):
 
 if __name__ == "__main__":
     board = Board.parse_instance()
+    board.find_regions()
+    board.regions_with_four()
+    #for row in board.grid:
+    #    print(" ".join(str(cell).rjust(2) for cell in row))
     problem = Nuruomino(board)
     goal_node = depth_first_tree_search(problem)  # ou outra busca mais adequada
-    goal_node.state.get_board().print_board()
+    if goal_node is not None:
+        goal_node.state.get_board().print_board()
+    '''else:
+        print("Nenhuma solução encontrada.")'''
+
     
